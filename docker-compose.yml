@@ -1,0 +1,59 @@
+version: "3.7"
+
+services:
+  postgres-service:
+    image: postgres:13.1
+    container_name: postgres-service
+    restart: on-failure
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: bot_backend
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-service-data:/var/lib/postgresql/data
+    networks:
+      - queues-bot-network
+
+  queues-bot-backend-service:
+    image: platypuses/queues-bot-backend:latest
+    container_name: queues-bot-backend-service
+    restart: on-failure
+    ports:
+      - 8070:8070
+    environment:
+      PORT: 8070
+      POSTGRES_DB_HOST: postgres-service:5432
+      POSTGRES_DB_NAME: bot_backend
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: postgres
+      LOGS_DIRECTORY: /logs
+    volumes:
+      - ./container-logs:/logs
+    networks:
+      - queues-bot-network
+    depends_on:
+      - postgres-service
+
+  queues-telegram-bot-service:
+    image: platypuses/queues-telegram-bot:latest
+    container_name: queues-telegram-bot-service
+    restart: on-failure
+    environment:
+      LOGS_DIRECTORY: /logs
+      BOT_USERNAME:
+      BOT_TOKEN:
+      BACKEND_BASE_URL: http://queues-bot-backend-service:8070/
+    volumes:
+      - ./container-logs:/logs
+    networks:
+      - queues-bot-network
+    depends_on:
+      - queues-bot-backend-service
+
+volumes:
+  postgres-service-data:
+
+networks:
+  queues-bot-network:
